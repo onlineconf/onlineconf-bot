@@ -10,4 +10,4 @@ CREATE TABLE `myteam_subscribe` (
 	`User` varchar(128) NOT NULL,
 	`WO` tinyint(1) NOT NULL DEFAULT '1',
 	PRIMARY KEY (`User`)
-)
+);
