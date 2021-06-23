@@ -28,7 +28,7 @@ func getNotifications(ctx context.Context, lastID, limit int) (*NotificationsRes
 	uri.RawQuery = url.Values{
 		"lastID": []string{strconv.Itoa(lastID)},
 		"limit":  []string{strconv.Itoa(limit)},
-		"wait":   []string{"60"},
+		"wait":   []string{config.GetString("/onlineconf/botapi/wait", "60")},
 	}.Encode()
 	req, err := http.NewRequestWithContext(ctx, "GET", uri.String(), nil)
 	if err != nil {
