@@ -18,7 +18,9 @@ func newBot() (*myteamBot, error) {
 	if url := config.GetString("/myteam/url", ""); url != "" {
 		opts = append(opts, botgolang.BotApiURL(url))
 	}
-	opts = append(opts, botgolang.BotDebug(true))
+	if config.GetBool("/myteam/debug", false) {
+		opts = append(opts, botgolang.BotDebug(true))
+	}
 	bot, err := botgolang.NewBot(config.GetString("/myteam/token", ""), opts...)
 	if err != nil {
 		return nil, err

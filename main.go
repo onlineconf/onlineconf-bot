@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	stdlog "log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -21,6 +22,10 @@ var db *database
 
 func main() {
 	flag.Parse()
+
+	stdlog.SetFlags(0)
+	onlineconf.SetOutput(log.Logger)
+
 	if *configDir != "" {
 		onlineconf.Initialize(*configDir)
 	}
