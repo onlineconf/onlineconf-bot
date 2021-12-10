@@ -127,13 +127,31 @@ func (bot *myteamBot) sendSubscribers(ctx context.Context, user string) error {
 	return message.Send()
 }
 
+func contains(list []string, val string) bool {
+	for _, item := range list {
+		if item == val {
+			return true
+		}
+	}
+	return false
+}
+
 func (bot *myteamBot) notify(ctx context.Context, notification Notification) error {
 	users := map[string]string{}
 	domain := config.GetString("/user/domain", "")
+	chatUserNames := config.GetStrings("/user/chatUsers", nil)
+	chatUsers := []string{}
 	var userMap map[string]string
 	config.GetStruct("/user/map", &userMap)
 	for user, access := range notification.Users {
 		myteamUser := userMap[user]
+
+		if chatUserNames != nil && myteamUser != "" && contains(chatUserNames, user) {
+			chatUsers = append(chatUsers, myteamUser)
+
+			continue
+		}
+
 		if myteamUser == "" {
 			myteamUser = user
 		}
@@ -147,6 +165,13 @@ func (bot *myteamBot) notify(ctx context.Context, notification Notification) err
 	if err != nil {
 		return err
 	}
+
+	if len(chatUsers) > 0 {
+		for _, user := range chatUsers {
+			notifyUsers = append(notifyUsers, user)
+		}
+	}
+
 	if len(notifyUsers) == 0 {
 		return nil
 	}
@@ -168,6 +193,7 @@ func (bot *myteamBot) notify(ctx context.Context, notification Notification) err
 			log.Ctx(ctx).Error().Err(err).Msg("failed to send notification")
 		}
 	}
+
 	return nil
 }
 
