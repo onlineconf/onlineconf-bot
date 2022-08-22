@@ -137,7 +137,7 @@ func (bot *myteamBot) notify(ctx context.Context, notification Notification) err
 		if myteamUser == "" {
 			myteamUser = user
 		}
-		if domain != "" {
+		if domain != "" && !strings.Contains(myteamUser, "@") {
 			myteamUser += "@" + domain
 		}
 		users[myteamUser] = access
