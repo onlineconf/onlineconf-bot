@@ -1,4 +1,4 @@
-package main
+package onlineconfbot
 
 import (
 	"encoding/json"
@@ -14,21 +14,21 @@ type Notification struct {
 	Value        NullString        `json:"value"`
 	MTime        string            `json:"mtime"`
 	Author       string            `json:"author"`
+	mappedAuthor string            `json:"-"` // author's messenger account
 	Comment      string            `json:"comment"`
 	Action       string            `json:"action"`
 	Notification string            `json:"notification"`
 	Users        map[string]string `json:"users"`
 }
 
-// TODO use strings.Builder
 func (notification *Notification) Text() string {
 	text := strings.Builder{}
 	text.WriteString(notification.MTime)
 	text.WriteString("\n")
 	text.WriteString(avatar(notification.Author))
-	text.WriteString(" @[")
-	text.WriteString(myteamUser(notification.Author))
-	text.WriteString("]\n")
+	text.WriteString(" ")
+	text.WriteString(notification.mappedAuthor)
+	text.WriteString("\n")
 
 	switch notification.Action {
 	case "delete":
