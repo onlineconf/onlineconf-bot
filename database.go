@@ -1,4 +1,4 @@
-package main
+package onlineconfbot
 
 import (
 	"context"
@@ -8,6 +8,12 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 )
+
+type SubscriptionStorage interface {
+	Subscribe(context.Context, string, bool) error
+	Unsubscribe(context.Context, string) error
+	Subscribers(context.Context) ([]Subscription, error)
+}
 
 type database struct {
 	*sql.DB
@@ -47,7 +53,7 @@ func (db *database) BeginTx(ctx context.Context) (*transaction, error) {
 }
 
 func (tx *transaction) GetLastID(ctx context.Context) (int, error) {
-	row := tx.QueryRowContext(ctx, "SELECT Value FROM myteam_lastid WHERE ID = 0 FOR UPDATE")
+	row := tx.QueryRowContext(ctx, "SELECT Value FROM lastid WHERE ID = 0 FOR UPDATE")
 	var lastID int
 	err := row.Scan(&lastID)
 	if err != nil {
@@ -57,35 +63,39 @@ func (tx *transaction) GetLastID(ctx context.Context) (int, error) {
 }
 
 func (tx *transaction) SetLastID(ctx context.Context, lastID int) error {
-	_, err := tx.ExecContext(ctx, "UPDATE myteam_lastid SET Value = ? WHERE ID = 0", lastID)
+	_, err := tx.ExecContext(ctx, "UPDATE lastid SET Value = ? WHERE ID = 0", lastID)
 	return err
 }
 
-func (db *database) Subscribe(ctx context.Context, myteamUser string, wo bool) error {
-	_, err := db.ExecContext(ctx, "INSERT INTO myteam_subscribe (User, WO) VALUES (?, ?) ON DUPLICATE KEY UPDATE WO=VALUES(WO)", myteamUser, wo)
+func (db *database) Subscribe(ctx context.Context, user string, wo bool) error {
+	_, err := db.ExecContext(ctx, "INSERT INTO subscribe (User, WO) VALUES (?, ?) ON DUPLICATE KEY UPDATE WO=VALUES(WO)", user, wo)
 	return err
 }
 
-func (db *database) Unsubscribe(ctx context.Context, myteamUser string) error {
-	_, err := db.ExecContext(ctx, "DELETE FROM myteam_subscribe WHERE User = ?", myteamUser)
+func (db *database) Unsubscribe(ctx context.Context, user string) error {
+	_, err := db.ExecContext(ctx, "DELETE FROM subscribe WHERE User = ?", user)
 	return err
 }
 
-func (db *database) Subscribers(ctx context.Context) (map[string]bool, error) {
-	rows, err := db.QueryContext(ctx, "SELECT User, WO FROM myteam_subscribe")
+type Subscription struct {
+	User string
+	WO   bool
+}
+
+func (db *database) Subscribers(ctx context.Context) ([]Subscription, error) {
+	rows, err := db.QueryContext(ctx, "SELECT User, WO FROM subscribe ORDER BY User")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	subscriptions := map[string]bool{}
+	subscriptions := []Subscription{}
 	for rows.Next() {
-		var user string
-		var wo bool
-		err := rows.Scan(&user, &wo)
+		var subscription Subscription
+		err := rows.Scan(&subscription.User, &subscription.WO)
 		if err != nil {
 			return nil, err
 		}
-		subscriptions[user] = wo
+		subscriptions = append(subscriptions, subscription)
 	}
 	return subscriptions, nil
 }
@@ -102,7 +112,7 @@ func (db *database) FilterSubscribed(ctx context.Context, users map[string]strin
 		}
 	}
 	query := strings.Builder{}
-	query.WriteString("SELECT User FROM myteam_subscribe WHERE ")
+	query.WriteString("SELECT User FROM subscribe WHERE ")
 	bind := []interface{}{}
 	if len(write) > 0 {
 		query.WriteString("User IN (")

@@ -1,4 +1,6 @@
 /onlineconf-myteam-bot
+/onlineconf-mattermost-bot
 
 .vscode
 .devcontainer
+*.cdb

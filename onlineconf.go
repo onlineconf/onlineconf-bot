@@ -1,4 +1,4 @@
-package main
+package onlineconfbot
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -57,7 +58,7 @@ func getNotifications(ctx context.Context, lastID, limit int) (*NotificationsRes
 	return &response, nil
 }
 
-func processNotifications(ctx context.Context, bot *myteamBot, limit int) (next bool, err error) {
+func processNotifications(ctx context.Context, bot Bot, limit int) (next bool, err error) {
 	waitCtx, cancel := context.WithCancel(log.Ctx(ctx).WithContext(context.Background()))
 	defer cancel()
 	go func() {
@@ -107,8 +108,10 @@ func processNotifications(ctx context.Context, bot *myteamBot, limit int) (next 
 			}
 		}
 	}()
+
+	notifier := newNotifier(bot)
 	for _, notification := range notifications.Notifications {
-		err := bot.notify(waitCtx, notification)
+		err := notifier.notify(waitCtx, notification)
 		if err != nil {
 			return false, err
 		}
@@ -123,7 +126,7 @@ func processNotifications(ctx context.Context, bot *myteamBot, limit int) (next 
 	return len(notifications.Notifications) > 0, nil
 }
 
-func notificationsReceiver(ctx context.Context, bot *myteamBot) {
+func notificationsReceiver(ctx context.Context, bot Bot) {
 	for {
 		timer := time.NewTimer(time.Duration(config.GetInt("/onlineconf/interval", 1)) * time.Second)
 		select {
@@ -140,4 +143,74 @@ func notificationsReceiver(ctx context.Context, bot *myteamBot) {
 			}
 		}
 	}
+}
+
+type Notifier struct {
+	bot     Bot
+	userMap map[string]string
+	domain  string
+}
+
+func newNotifier(bot Bot) Notifier {
+	ret := Notifier{
+		bot:    bot,
+		domain: config.GetString("/user/domain", ""),
+	}
+
+	config.GetStruct("/user/map", &ret.userMap)
+	return ret
+}
+
+func (ntf *Notifier) mapUser(origUser string) string {
+	user, ok := ntf.userMap[origUser]
+	if !ok {
+		user = origUser
+	}
+
+	if ntf.domain != "" && !strings.Contains(user, "@") {
+		user += "@" + ntf.domain
+	}
+
+	return user
+}
+
+func (ntf *Notifier) notify(ctx context.Context, notification Notification) error {
+	users := make(map[string]string, len(notification.Users))
+
+	for user, access := range notification.Users {
+		users[ntf.mapUser(user)] = access
+	}
+
+	if len(users) == 0 {
+		return nil
+	}
+
+	notification.mappedAuthor = ntf.bot.MentionLink(ntf.mapUser(notification.Author))
+
+	notifyUsers, err := db.FilterSubscribed(ctx, users)
+	if err != nil {
+		return err
+	}
+
+	link := ""
+	if linkURLstr, hasLinkURL := config.GetStringIfExists("/onlineconf/link-url"); hasLinkURL {
+		if linkURL, err := url.ParseRequestURI(linkURLstr); err == nil {
+			linkURL.Fragment = notification.Path
+			link = linkURL.String()
+		} else {
+			log.Ctx(ctx).Warn().Err(err).Msg("failed to parse link URL")
+		}
+	}
+
+	notification.Path = ntf.bot.ParamLink(notification.Path, link)
+
+	text := notification.Text()
+
+	for _, user := range notifyUsers {
+		if err = ntf.bot.Notify(ctx, user, link, text); err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("failed to send notification")
+		}
+	}
+
+	return nil
 }
