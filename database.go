@@ -29,7 +29,7 @@ func openDatabase() (*database, error) {
 	mysqlConfig.User = config.GetString("/database/user", defaultName)
 	mysqlConfig.Passwd = config.GetString("/database/pass", "")
 	mysqlConfig.Net = "tcp"
-	mysqlConfig.Addr = net.JoinHostPort(config.GetString("/database/host", ""), "3306")
+	mysqlConfig.Addr = net.JoinHostPort(config.GetString("/database/host", ""), config.GetString("/database/port", "3306"))
 	mysqlConfig.DBName = config.GetString("/database/base", defaultName)
 	mysqlConfig.Params = map[string]string{
 		"charset":   "utf8mb4",
