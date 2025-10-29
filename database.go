@@ -52,8 +52,8 @@ func (db *database) BeginTx(ctx context.Context) (*transaction, error) {
 	return &transaction{tx}, nil
 }
 
-func (tx *transaction) GetLastID(ctx context.Context) (int, error) {
-	row := tx.QueryRowContext(ctx, "SELECT Value FROM lastid WHERE ID = 0 FOR UPDATE")
+func (tx *transaction) GetLastID(ctx context.Context, botID int) (int, error) {
+	row := tx.QueryRowContext(ctx, "SELECT Value FROM lastid WHERE ID = ? FOR UPDATE", botID)
 	var lastID int
 	err := row.Scan(&lastID)
 	if err != nil {
@@ -62,8 +62,8 @@ func (tx *transaction) GetLastID(ctx context.Context) (int, error) {
 	return lastID, nil
 }
 
-func (tx *transaction) SetLastID(ctx context.Context, lastID int) error {
-	_, err := tx.ExecContext(ctx, "UPDATE lastid SET Value = ? WHERE ID = 0", lastID)
+func (tx *transaction) SetLastID(ctx context.Context, lastID int, botID int) error {
+	_, err := tx.ExecContext(ctx, "UPDATE lastid SET Value = ? WHERE ID = ?", lastID, botID)
 	return err
 }
 

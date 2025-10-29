@@ -80,7 +80,7 @@ func processNotifications(ctx context.Context, bot Bot, limit int) (next bool, e
 	if err != nil {
 		return false, err
 	}
-	lastID, err := tx.GetLastID(ctx)
+	lastID, err := tx.GetLastID(ctx, bot.ID())
 	if err != nil {
 		return false, err
 	}
@@ -101,7 +101,7 @@ func processNotifications(ctx context.Context, bot Bot, limit int) (next bool, e
 	newLastID := 0
 	defer func() {
 		if newLastID != 0 {
-			if setErr := tx.SetLastID(waitCtx, newLastID); setErr == nil {
+			if setErr := tx.SetLastID(waitCtx, newLastID, bot.ID()); setErr == nil {
 				log.Ctx(ctx).Debug().Int("lastID", newLastID).Msg("new lastID")
 			} else if err == nil || errors.Is(err, context.Canceled) {
 				err = setErr
@@ -187,9 +187,15 @@ func (ntf *Notifier) notify(ctx context.Context, notification Notification) erro
 
 	notification.mappedAuthor = ntf.bot.MentionLink(ntf.mapUser(notification.Author))
 
-	notifyUsers, err := db.FilterSubscribed(ctx, users)
-	if err != nil {
-		return err
+	var err error
+	notifyUsers := []string{}
+	if ntf.bot.FilterSubscribers() {
+		notifyUsers, err = db.FilterSubscribed(ctx, users)
+		if err != nil {
+			return err
+		}
+	} else {
+		notifyUsers = append(notifyUsers, notification.Author)
 	}
 
 	link := ""
@@ -207,7 +213,7 @@ func (ntf *Notifier) notify(ctx context.Context, notification Notification) erro
 	text := notification.Text()
 
 	for _, user := range notifyUsers {
-		if err = ntf.bot.Notify(ctx, user, link, text); err != nil {
+		if err = ntf.bot.Notify(ctx, user, link, text, notification); err != nil {
 			log.Ctx(ctx).Error().Err(err).Msg("failed to send notification")
 		}
 	}
