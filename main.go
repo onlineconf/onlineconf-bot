@@ -55,6 +55,8 @@ func BotMain[botType Bot](newBot func(*onlineconf.Module, SubscriptionStorage) (
 	ctx, cancel := context.WithCancel(log.Logger.WithContext(context.Background()))
 	defer cancel()
 
+	probeServer := ProbeServerIfEnabled()
+
 	log.Info().Msg("onlineconf-bot started")
 	sigC := make(chan os.Signal, 1)
 	signal.Notify(sigC, syscall.SIGINT, syscall.SIGTERM)
@@ -67,6 +69,7 @@ func BotMain[botType Bot](newBot func(*onlineconf.Module, SubscriptionStorage) (
 	}()
 
 	go bot.UpdatesProcessor(ctx)
+	go probeServer.Run(ctx)
 	notificationsReceiver(ctx, bot)
 
 	log.Info().Msg("onlineconf-bot stopped")
