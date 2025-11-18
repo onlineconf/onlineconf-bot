@@ -49,6 +49,10 @@ The module must be configured to contain the following `/`-separated parameters:
 * `user`
 	* `domain` - domain name appended to OnlineConf username to match the messenger account
 	* `map` - YAML/JSON-mapping of non-standard usernames from OnlineConf to the messenger account (without domain name)
+* `probe`
+    * `addr` - Address where to listen web-server for probes (default: `0.0.0.0:8000`)
+    * `uri`  - Http uri where to listen on web-server (default: `/probe`)
+    * `enabled` - Enable or disable probe-server (default: disabled)<br>
 
 This configuration must be placed in OnlineConf under `/onlineconf/module/onlineconf-bot`.
 
