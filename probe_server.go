@@ -23,19 +23,15 @@ type ProbeServer interface {
 
 type probeServer struct {
 	server *http.Server
-	mu     sync.Mutex
 	uri    string
 }
 
 var _ ProbeServer = &probeServer{}
 
 func (ps *probeServer) Run(ctx context.Context) error {
-	ps.mu.Lock()
-	defer ps.mu.Unlock()
-
 	if ps.server != nil {
 		log.Info().Msg("Probe-Server was not configured. Do nothing")
-		<-ctx.Done()
+
 		return nil
 	}
 
