@@ -1,15 +1,19 @@
-FROM golang:bullseye
+ARG IMAGE_GOLANG=golang:bullseye
+FROM ${IMAGE_GOLANG}
 
 WORKDIR /go/src/github.com/onlineconf/onlineconf-bot
 
-COPY go.* *.go .
+COPY go.* ./
+RUN go mod download -x
+
+COPY *.go ./
 COPY cmd/ ./cmd/
-RUN go build -o . ./cmd/onlineconf-myteam-bot/ ./cmd/onlineconf-mattermost-bot/
+RUN CGO_ENABLED=0 go build -x -o ./bin/ ./cmd/*/
 
 FROM gcr.io/distroless/base
 
-COPY --from=0 /go/src/github.com/onlineconf/onlineconf-bot/onlineconf-myteam-bot \
-		      /go/src/github.com/onlineconf/onlineconf-bot/onlineconf-mattermost-bot \
-			  /usr/bin/
+COPY --from=0 \
+	/go/src/github.com/onlineconf/onlineconf-bot/bin/* \
+	/usr/bin/
 
 ENTRYPOINT ["onlineconf-mattermost-bot"]
