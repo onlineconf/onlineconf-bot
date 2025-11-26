@@ -5,7 +5,6 @@ import (
 	stdlog "log"
 	"net"
 	"net/http"
-	"sync"
 
 	"github.com/rs/zerolog/log"
 )
