@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"net/http"
 	"strings"
 
 	botgolang "github.com/mail-ru-im/bot-golang"
@@ -13,6 +15,7 @@ import (
 type MyteamBot struct {
 	*botgolang.Bot
 	subscr onlineconfbot.SubscriptionStorage
+	id     int
 }
 
 var _ onlineconfbot.Bot = MyteamBot{}
@@ -25,11 +28,20 @@ func NewMyteamBot(config *onlineconf.Module, subscr onlineconfbot.SubscriptionSt
 	if config.GetBool("/myteam/debug", false) {
 		opts = append(opts, botgolang.BotDebug(true))
 	}
+	if config.GetBool("/myteam/insecure", false) {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		c := http.Client{Transport: tr}
+		opts = append(opts, botgolang.BotHTTPClient(c))
+	}
+
 	bot, err := botgolang.NewBot(config.GetString("/myteam/token", ""), opts...)
 	if err != nil {
 		return MyteamBot{}, err
 	}
-	return MyteamBot{bot, subscr}, nil
+	id := config.GetInt("/myteam/id", 0)
+	return MyteamBot{bot, subscr, id}, nil
 }
 
 func (bot MyteamBot) UpdatesProcessor(ctx context.Context) {
@@ -78,10 +90,11 @@ func (bot MyteamBot) sendSubscribePrompt(user string) error {
 	message := bot.NewInlineKeyboardMessage(
 		user,
 		"Choose parameters you want to subscribe to",
-		[][]botgolang.Button{{
-			{Text: "I can edit", CallbackData: "subscribe write"},
-			{Text: "I can view", CallbackData: "subscribe read"},
-		}},
+		botgolang.Keyboard{
+			Rows: [][]botgolang.Button{{
+				{Text: "I can edit", CallbackData: "subscribe write"},
+				{Text: "I can view", CallbackData: "subscribe read"},
+			}}},
 	)
 	return message.Send()
 }
@@ -131,10 +144,10 @@ func (bot MyteamBot) sendSubscribers(ctx context.Context, user string) error {
 	return message.Send()
 }
 
-func (bot MyteamBot) Notify(ctx context.Context, user, link, text string) error {
-	var keyboard [][]botgolang.Button
+func (bot MyteamBot) Notify(ctx context.Context, user, link, text string, _ onlineconfbot.Notification) error {
+	var keyboard botgolang.Keyboard
 	if link != "" {
-		keyboard = [][]botgolang.Button{{{Text: "Open", URL: link}}}
+		keyboard = botgolang.Keyboard{Rows: [][]botgolang.Button{{{Text: "Open", URL: link}}}}
 	}
 
 	message := bot.NewInlineKeyboardMessage(user, text, keyboard)
@@ -148,3 +161,6 @@ func (bot MyteamBot) MentionLink(user string) string {
 func (bot MyteamBot) ParamLink(param, link string) string {
 	return param
 }
+
+func (bot MyteamBot) ID() int                 { return bot.id }
+func (bot MyteamBot) FilterSubscribers() bool { return true }

@@ -21,6 +21,7 @@ type MattermostBot struct {
 	commands []mmCommandHandler
 	botID    string
 	subscr   onlineconfbot.SubscriptionStorage
+	id       int
 }
 
 var _ onlineconfbot.Bot = &MattermostBot{}
@@ -101,13 +102,14 @@ func NewMattermostBot(config *onlineconf.Module, subscr onlineconfbot.Subscripti
 	if err != nil {
 		return nil, err
 	}
-
+	id := config.GetInt("/mattermost/id", 0)
 	return &MattermostBot{
 		api:      api,
 		ws:       ws,
 		commands: mmCommands,
 		botID:    me.Id,
 		subscr:   subscr,
+		id:       id,
 	}, nil
 }
 
@@ -346,7 +348,7 @@ func (mmb *MattermostBot) send(channelID, rootID, userID, message string) error 
 	return err
 }
 
-func (mmb *MattermostBot) Notify(ctx context.Context, userName, link, text string) error {
+func (mmb *MattermostBot) Notify(ctx context.Context, userName, link, text string, _ onlineconfbot.Notification) error {
 	user, _, err := mmb.api.GetUserByUsername(userName, "")
 	if err != nil {
 		return err
@@ -373,3 +375,6 @@ var (
 func (mmb *MattermostBot) ParamLink(param, link string) string {
 	return "[" + paramRepl.Replace(param) + "](" + linkRepl.Replace(link) + ")"
 }
+
+func (mmb *MattermostBot) ID() int                 { return mmb.id }
+func (mmb *MattermostBot) FilterSubscribers() bool { return true }

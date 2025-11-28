@@ -12,8 +12,6 @@ OnlineConf (`onlineconf-admin`) >= v3.5.0
 The database must be created and then populated with tables using [schema.sql](/schema.sql).
 An address and credentials of the database must be stored in the `/database` parameters (see below).
 
-The only one instance of `onlineconf-bot` daemon should be run simultaneously.
-
 Two separate binaries will be built for each messenger supported, see `Dockerfile` for an example.
 
 ## Configuration
@@ -36,9 +34,19 @@ The module must be configured to contain the following `/`-separated parameters:
     * `api-url` - Mattermost API base URL (i.e. scheme and hostname)
     * `ws-url` - Mattermost Websocket base URL
     * `token` - Mattermost bot token
+    * `id` - internal integer bot id
 * `myteam` (only used by `onlineconf-myteam-bot`)
 	* `token` - a bot token retrieved from Metabot (required)
 	* `url` - URL of an alternative Myteam installation
+	* `id` - internal integer bot id
+* `argos` (only used by `onlineconf-argos-bot`)
+    * `host` - a Argos Timeline host (required)
+    * `port` - a Argos Timeline port (required)
+    * `protocol` - a Argos Timeline upd or tcp protocol (required)
+    * `metric_name` - name of Argos Timeline metric (required)
+    * `fields` - yml config, map of index Argos Timeline field on notification field (required)
+    * `sentry_dsn` - sentry dsn
+    * `id` - internal integer bot id
 * `onlineconf`
 	* `botapi`
 		* `password` - password (required)
