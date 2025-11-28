@@ -63,7 +63,7 @@ func (tx *transaction) GetLastID(ctx context.Context, botID int) (int, error) {
 }
 
 func (tx *transaction) SetLastID(ctx context.Context, lastID int, botID int) error {
-	_, err := tx.ExecContext(ctx, "UPDATE lastid SET Value = ? WHERE ID = ?", lastID, botID)
+	_, err := tx.ExecContext(ctx, "INSERT INTO lastid (ID, Value) VALUES (?, ?) ON DUPLICATE KEY UPDATE Value=VALUES(Value)", botID, lastID)
 	return err
 }
 
