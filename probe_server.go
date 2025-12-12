@@ -28,7 +28,7 @@ type probeServer struct {
 var _ ProbeServer = &probeServer{}
 
 func (ps *probeServer) Run(ctx context.Context) error {
-	if ps.server != nil {
+	if ps.server == nil {
 		log.Info().Msg("Probe-Server was not configured. Do nothing")
 
 		return nil
