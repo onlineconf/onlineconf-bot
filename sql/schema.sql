@@ -5,6 +5,8 @@ CREATE TABLE `lastid` (
 );
 
 INSERT INTO `lastid` VALUES (0, 0);
+INSERT INTO `lastid` VALUES (1, 0);
+INSERT INTO `lastid` VALUES (2, 0);
 
 CREATE TABLE `subscribe` (
 	`User` varchar(128) NOT NULL,
