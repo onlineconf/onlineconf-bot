@@ -149,6 +149,8 @@ func (bot *YaMessengerBot) handleUpdate(ctx context.Context, update yaUpdate) {
 	case "/subscribers":
 		if onlineconfbot.IsAdmin(user) {
 			err = bot.sendSubscribers(ctx, user)
+		} else {
+			log.Ctx(ctx).Warn().Str("user", user).Msg("non-admin attempted /subscribers command")
 		}
 	case "/help":
 		err = bot.sendHelp(user)
@@ -223,8 +225,10 @@ func (bot *YaMessengerBot) sendHelp(user string) error {
 		"/start - Show subscribe prompt\n" +
 		"/subscribe [edit|view] - Subscribe to notifications\n" +
 		"/stop - Unsubscribe from notifications\n" +
-		"/subscribers - Show subscribed users (admin only)\n" +
 		"/help - Show this help"
+	if onlineconfbot.IsAdmin(user) {
+		text += "\n/subscribers - Show subscribed users (admin only)"
+	}
 	req := yaSendTextRequest{
 		Login: user,
 		Text:  text,
