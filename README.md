@@ -1,6 +1,6 @@
 # onlineconf-bot
 
-`onlineconf-bot` is used to send [OnlineConf](https://github.com/onlineconf/onlineconf) configuration changes notifications to subscribed users using [Myteam](https://biz.mail.ru/myteam/) or [Mattermost](https://mattermost.com/) messengers.
+`onlineconf-bot` is used to send [OnlineConf](https://github.com/onlineconf/onlineconf) configuration changes notifications to subscribed users using [Myteam](https://biz.mail.ru/myteam/), [Mattermost](https://mattermost.com/), or [Yandex Messenger](https://360.yandex.com/business/messenger/) messengers.
 
 ## Requirements
 
@@ -14,7 +14,7 @@ An address and credentials of the database must be stored in the `/database` par
 
 The only one instance of `onlineconf-bot` daemon should be run simultaneously.
 
-Two separate binaries will be built for each messenger supported, see `Dockerfile` for an example.
+Separate binaries will be built for each messenger supported, see `Dockerfile` for an example.
 
 ## Configuration
 
@@ -39,6 +39,9 @@ The module must be configured to contain the following `/`-separated parameters:
 * `myteam` (only used by `onlineconf-myteam-bot`)
 	* `token` - a bot token retrieved from Metabot (required)
 	* `url` - URL of an alternative Myteam installation
+* `yamessenger` (only used by `onlineconf-yamessenger-bot`)
+	* `token` - OAuth bot token from Yandex 360 Bot Platform (required)
+	* `api-url` - Yandex Messenger Bot API URL (default: `https://botapi.messenger.yandex.net`)
 * `onlineconf`
 	* `botapi`
 		* `password` - password (required)
