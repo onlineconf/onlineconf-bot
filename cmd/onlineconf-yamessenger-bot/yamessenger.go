@@ -241,7 +241,7 @@ func (bot *YaMessengerBot) MentionLink(user string) string {
 }
 
 func (bot *YaMessengerBot) ParamLink(param, link string) string {
-	return param
+	return "[" + param + "](" + link + ")"
 }
 
 // HTTP helpers
