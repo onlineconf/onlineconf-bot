@@ -88,20 +88,13 @@ func (notification *Notification) Text() string {
 						}
 					}
 				} else {
-					text.WriteString("\n```")
-					text.WriteString(notification.Value.String)
-					text.WriteString("```")
+					blockQuote(&text, notification.Value.String)
 				}
 			case "application/x-symlink":
 				text.WriteString("\n")
 				text.WriteString(notification.Value.String)
 			default:
-				text.WriteString("\n")
-				if notification.Value.String != "" {
-					text.WriteString("```")
-					text.WriteString(notification.Value.String)
-					text.WriteString("```")
-				}
+				blockQuote(&text, notification.Value.String)
 			}
 		}
 	}
@@ -110,6 +103,21 @@ func (notification *Notification) Text() string {
 		text.WriteString(notification.Comment)
 	}
 	return text.String()
+}
+
+func blockQuote(text *strings.Builder, s string) {
+	text.WriteString("\n")
+
+	if s != "" {
+		text.WriteString("```\n")
+		text.WriteString(s)
+
+		if strings.HasSuffix(s, "\n") {
+			text.WriteString("```")
+		} else {
+			text.WriteString("\n```")
+		}
+	}
 }
 
 var avatars = []rune("🐀🐁🐂🐃🐄🐅🐆🐇🐈🐉🐊🐋🐌🐍🐎🐏🐐🐑🐒🐓🐕🐖🐗🐘🐙🐛🐜🐝🐞🐟🐠🐡🐢🐥🐨🐩🐪🐫🐬🐭🐮🐯🐰🐱🐲🐳🐴🐵🐶🐷🐸🐹🐺🐻🐼" +
