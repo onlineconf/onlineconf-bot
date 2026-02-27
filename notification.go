@@ -88,13 +88,13 @@ func (notification *Notification) Text() string {
 						}
 					}
 				} else {
-					blockQuote(&text, notification.Value.String)
+					blockQuote(&text, notification.Value.String, "")
 				}
 			case "application/x-symlink":
 				text.WriteString("\n")
 				text.WriteString(notification.Value.String)
 			default:
-				blockQuote(&text, notification.Value.String)
+				blockQuote(&text, notification.Value.String, notification.ContentType)
 			}
 		}
 	}
@@ -105,11 +105,21 @@ func (notification *Notification) Text() string {
 	return text.String()
 }
 
-func blockQuote(text *strings.Builder, s string) {
+func blockQuote(text *strings.Builder, s, ctype string) {
 	text.WriteString("\n")
 
 	if s != "" {
-		text.WriteString("```\n")
+		switch ctype {
+		case "application/json":
+			ctype = "json\n"
+		case "application/x-yaml":
+			ctype = "yaml\n"
+		default:
+			ctype = "\n"
+		}
+
+		text.WriteString("```")
+		text.WriteString(ctype)
 		text.WriteString(s)
 
 		if strings.HasSuffix(s, "\n") {
