@@ -2,9 +2,11 @@
 
 `onlineconf-bot` is used to send [OnlineConf](https://github.com/onlineconf/onlineconf) configuration changes notifications to subscribed users using [Myteam](https://biz.mail.ru/myteam/), [Mattermost](https://mattermost.com/), or [Yandex Messenger](https://360.yandex.com/business/messenger/) messengers.
 
+Besides changes, the bot delivers the **audit events** of OnlineConf — today the reveals of encrypted values: every time a user asks OnlineConf to show the plaintext of an encrypted parameter (or its history), the users who have access to that parameter are told who did it. The value itself is never part of a message: an encrypted value shows as a lock in change notifications too.
+
 ## Requirements
 
-OnlineConf (`onlineconf-admin`) >= v3.5.0
+OnlineConf (`onlineconf-admin`) >= v3.5.0; the audit feed needs an `onlineconf-admin` with value encryption (BotAPI `GET /audit/`). Against an older admin, or a bot account without the `audit` scope, the bot logs that the feed is unavailable and checks again later.
 
 ## Installation
 
@@ -18,11 +20,13 @@ Separate binaries will be built for each messenger supported, see `Dockerfile` f
 
 ## Configuration
 
-`onlineconf-bot` uses OnlineConf BotAPI to retrieve notifications from OnlineConf.
+`onlineconf-bot` uses OnlineConf BotAPI to retrieve notifications and audit events from OnlineConf.
 To add BotAPI user for `onlineconf-bot` the following configuration is required:
 
 * `/onlineconf/botapi/bot/onlineconf-bot` - the parameter name is the username, a value is SHA256 of a password (required)
-* `/onlineconf/botapi/bot/onlineconf-bot/scopes` = `notifications` (list, required)
+* `/onlineconf/botapi/bot/onlineconf-bot/scopes` = `notifications,audit` (list; `notifications` required, `audit` enables the audit feed)
+
+Each BotAPI feed keeps its own cursor in the `lastid` table of the bot's database (`ID` 0 for notifications, 1000 for audit events, leaving the ids in between to per-bot notification cursors); an installation created before the audit feed gets the audit row from [sql/upgrade.sql](/sql/upgrade.sql).
 
 `onlineconf-bot` is configured using OnlineConf itself, it reads `onlineconf-bot` module (`/usr/local/etc/onlineconf-bot.cdb` file).
 The module must be configured to contain the following `/`-separated parameters:
@@ -64,7 +68,7 @@ The best way to achieve the described configuration on a server (or a container)
 | Path | Type | Value |
 | ---- | ---- | ----- |
 | `/onlineconf/botapi/bot/onlineconf-bot` | Text | SHA256 of a password used by `onlineconf-bot` to connect to OnlineConf BotAPI |
-| `/onlineconf/botapi/bot/onlineconf-bot/scopes` | List | `notifications` |
+| `/onlineconf/botapi/bot/onlineconf-bot/scopes` | List | `notifications,audit` |
 | `/onlineconf/service/onlineconf-bot` | Text | SHA256 of a password used by `onlineconf-updater`/`onlineconf-csi-driver` |
 | `/onlineconf/module` | Case | key: service = `onlineconf-bot`<br/>value: symlink to `/onlineconf/chroot/onlineconf-bot` |
 | `/onlineconf/chroot/onlineconf-bot` | YAML | `delimiter: /` |

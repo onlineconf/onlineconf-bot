@@ -1,6 +1,7 @@
 package onlineconfbot
 
 import (
+	"context"
 	"encoding/json"
 	"hash/crc32"
 	"strings"
@@ -11,6 +12,7 @@ type Notification struct {
 	Path         string            `json:"path"`
 	Version      int               `json:"version"`
 	ContentType  string            `json:"type"`
+	Encrypted    bool              `json:"encrypted"` // the value is a secret: served as null, shown as a lock
 	Value        NullString        `json:"value"`
 	MTime        string            `json:"mtime"`
 	Author       string            `json:"author"`
@@ -19,6 +21,26 @@ type Notification struct {
 	Action       string            `json:"action"`
 	Notification string            `json:"notification"`
 	Users        map[string]string `json:"users"`
+}
+
+func (notification *Notification) entryID() int {
+	return notification.ID
+}
+
+func (notification *Notification) deliver(ctx context.Context, ntf *Notifier) error {
+	return ntf.notify(ctx, *notification)
+}
+
+// caseBranch is one entry of a case value: a condition (at most one of the
+// four), the branch's type and value, and whether the value is a secret.
+type caseBranch struct {
+	Server     *string `json:"server"`
+	Group      *string `json:"group"`
+	Datacenter *string `json:"datacenter"`
+	Service    *string `json:"service"`
+	Mime       string  `json:"mime"`
+	Value      *string `json:"value"`
+	Encrypted  bool    `json:"encrypted"`
 }
 
 func (notification *Notification) Text() string {
@@ -41,48 +63,57 @@ func (notification *Notification) Text() string {
 	text.WriteString(" ")
 	text.WriteString(notification.Path)
 	if notification.Action != "delete" && notification.Notification == "with-value" {
+		if notification.Encrypted {
+			text.WriteString(" 🔒")
+		}
 		if ct := contentTypeSymbol(notification.ContentType); ct != "" {
 			text.WriteString(" ")
 			text.WriteString(ct)
 		}
-		if notification.Value.Valid {
+		if notification.Value.Valid && !notification.Encrypted {
 			switch notification.ContentType {
 			case "application/x-case":
-				var data []map[string]string
+				var data []caseBranch
 				err := json.Unmarshal([]byte(notification.Value.String), &data)
 				if err == nil {
 					for _, c := range data {
 						text.WriteString("\n")
-						if s, ok := c["server"]; ok {
-							text.WriteString("ⓗ ")
-							text.WriteString(s)
-						} else if g, ok := c["group"]; ok {
-							text.WriteString("ⓖ ")
-							text.WriteString(g)
-						} else if d, ok := c["datacenter"]; ok {
-							text.WriteString("ⓓ ")
-							text.WriteString(d)
-						} else if s, ok := c["service"]; ok {
-							text.WriteString("ⓢ ")
-							text.WriteString(s)
-						} else {
+						switch {
+						case c.Server != nil:
+							text.WriteString("ⓗ ")
+							text.WriteString(*c.Server)
+						case c.Group != nil:
+							text.WriteString("ⓖ ")
+							text.WriteString(*c.Group)
+						case c.Datacenter != nil:
+							text.WriteString("ⓓ ")
+							text.WriteString(*c.Datacenter)
+						case c.Service != nil:
+							text.WriteString("ⓢ ")
+							text.WriteString(*c.Service)
+						default:
 							text.WriteString("☆️")
 						}
 						text.WriteString(": ")
-						ct := contentTypeSymbol(c["mime"])
-						value, ok := c["value"]
+						ct := contentTypeSymbol(c.Mime)
 						text.WriteString(ct)
-						if ok {
+						switch {
+						case c.Encrypted:
 							if ct != "" {
-								text.WriteString(" ")
+								text.WriteString(" ")
 							}
-							if strings.ContainsRune(value, '"') {
+							text.WriteString("🔒")
+						case c.Value != nil:
+							if ct != "" {
+								text.WriteString(" ")
+							}
+							if strings.ContainsRune(*c.Value, '"') {
 								text.WriteString("«")
-								text.WriteString(value)
+								text.WriteString(*c.Value)
 								text.WriteString("»")
 							} else {
 								text.WriteString("\"")
-								text.WriteString(value)
+								text.WriteString(*c.Value)
 								text.WriteString("\"")
 							}
 						}

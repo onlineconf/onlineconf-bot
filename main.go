@@ -70,7 +70,8 @@ func BotMain[botType Bot](newBot func(*onlineconf.Module, SubscriptionStorage) (
 
 	go bot.UpdatesProcessor(ctx)
 	go probeServer.Run(ctx)
-	notificationsReceiver(ctx, bot)
+	go auditFeed.receiver(ctx, bot)
+	notificationFeed.receiver(ctx, bot)
 
 	log.Info().Msg("onlineconf-bot stopped")
 }
