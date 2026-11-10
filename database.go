@@ -3,6 +3,8 @@ package onlineconfbot
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"net"
 	"strings"
 
@@ -52,18 +54,21 @@ func (db *database) BeginTx(ctx context.Context) (*transaction, error) {
 	return &transaction{tx}, nil
 }
 
-func (tx *transaction) GetLastID(ctx context.Context) (int, error) {
-	row := tx.QueryRowContext(ctx, "SELECT Value FROM lastid WHERE ID = 0 FOR UPDATE")
+func (tx *transaction) GetLastID(ctx context.Context, feedID int) (int, error) {
+	row := tx.QueryRowContext(ctx, "SELECT Value FROM lastid WHERE ID = ? FOR UPDATE", feedID)
 	var lastID int
 	err := row.Scan(&lastID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("lastid row %d is missing, apply sql/upgrade.sql: %w", feedID, err)
+	}
 	if err != nil {
 		return 0, err
 	}
 	return lastID, nil
 }
 
-func (tx *transaction) SetLastID(ctx context.Context, lastID int) error {
-	_, err := tx.ExecContext(ctx, "UPDATE lastid SET Value = ? WHERE ID = 0", lastID)
+func (tx *transaction) SetLastID(ctx context.Context, feedID, lastID int) error {
+	_, err := tx.ExecContext(ctx, "UPDATE lastid SET Value = ? WHERE ID = ?", lastID, feedID)
 	return err
 }
 
